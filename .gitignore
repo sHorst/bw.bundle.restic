@@ -1,0 +1,7 @@
+git_deploy_repos
+*.pyc
+.slack.cfg
+*.swp
+.DS_Store
+pwget.secret
+.idea
