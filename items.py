@@ -39,7 +39,7 @@ actions = {
 
 files = {
     '/etc/restic/include': {
-        'content': "\n".join(node.metadata.get('restic', {}).get('backup_folders', [])),
+        'content': "\n".join(node.metadata.get('restic', {}).get('backup_folders', [])) + "\n",
         'mode': "0600",
     }
 }
@@ -154,6 +154,9 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             'backup_host': backup_host,
             'node_name': node.name,
             'keep': backup_host_config.get('keep', {}),
+            'pre_commands': node.metadata.get('restic', {}).get('pre_commands', []),
+            'post_commands': node.metadata.get('restic', {}).get('post_commands', []),
+            'stdin_commands': node.metadata.get('restic', {}).get('stdin_commands', {}),
         },
         'source': "cron_hourly.sh",
         'owner': 'root',
