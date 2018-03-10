@@ -148,7 +148,8 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         ]
     }
 
-    files['/etc/cron.hourly/restic_{host_name}'.format(host_name=backup_host)] = {
+    # cron does not like . in filenames
+    files['/etc/cron.hourly/restic_{host_name}'.format(host_name=backup_host.replace('.', '_'))] = {
         'content_type': "mako",
         'context': {
             'backup_host': backup_host,
@@ -167,7 +168,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         ]
     }
 
-    files['/etc/cron.daily/restic_{host_name}'.format(host_name=backup_host)] = {
+    files['/etc/cron.daily/restic_{host_name}'.format(host_name=backup_host.replace('.', '_'))] = {
         'content_type': "mako",
         'context': {
             'backup_host': backup_host,

@@ -9,7 +9,7 @@ ${pre_cmd}
 % endfor
 
 # stdin backup
-% for name, cmd in stdin_commands.items():
+% for name, cmd in sorted(stdin_commands.items()):
 ${cmd} | /opt/restic/restic backup --stdin --stdin-filename ${name}
 % endfor
 
