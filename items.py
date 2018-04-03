@@ -39,7 +39,7 @@ actions = {
 
 files = {
     '/etc/restic/include': {
-        'content': "\n".join(node.metadata.get('restic', {}).get('backup_folders', [])) + "\n",
+        'content': "\n".join(sorted(node.metadata.get('restic', {}).get('backup_folders', []))) + "\n",
         'mode': "0600",
     }
 }
