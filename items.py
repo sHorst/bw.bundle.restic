@@ -47,6 +47,7 @@ files = {
 
 for backup_host, backup_host_config in node.metadata.get('restic', {}).get('backup_hosts', {}).items():
     identity_file = "~/.ssh/{host_name}".format(host_name=backup_host)
+    # TODO: make work without internet
     backup_host_ip = socket.gethostbyname(backup_host)
     port = backup_host_config.get('port', 22)
     host_key = backup_host_config.get('hostkey')  # This should break, if it is not set!
