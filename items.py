@@ -160,6 +160,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             'pre_commands': node.metadata.get('restic', {}).get('pre_commands', []),
             'post_commands': node.metadata.get('restic', {}).get('post_commands', []),
             'stdin_commands': node.metadata.get('restic', {}).get('stdin_commands', {}),
+            'LOCK_FILE': '/tmp/restic.lock',
         },
         'source': "cron_hourly.sh",
         'owner': 'root',
