@@ -22,7 +22,7 @@ downloads = {
     '/opt/restic/restic.bz2': {
         'url': 'https://github.com/restic/restic/releases/download/v0.8.1/restic_0.8.1_linux_amd64.bz2',
         'sha256': '78abad9b589f303f6d9c129ed5ebfe240fbdbdaa5bb0ffec43dacb2991bd526a',
-        'needs': ['directory:/opt/restic'],
+        'needs': ['directory:/opt/restic', 'pkg_apt:ca-certificates'],
         'triggers': ['action:unpack_restic'],
         'unless': 'test -f /opt/restic/restic',
     }
