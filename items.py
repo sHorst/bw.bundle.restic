@@ -16,6 +16,7 @@ directories = {
 
 pkg_apt = {
     'bzip2': {'installed': True},
+    'ca-certificates': {'installed': True},
 }
 
 downloads = {
