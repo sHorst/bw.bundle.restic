@@ -16,12 +16,13 @@ directories = {
 
 pkg_apt = {
     'bzip2': {'installed': True},
+    'ca-certificates': {'installed': True},
 }
 
 downloads = {
     '/opt/restic/restic.bz2': {
-        'url': 'https://github.com/restic/restic/releases/download/v0.8.1/restic_0.8.1_linux_amd64.bz2',
-        'sha256': '78abad9b589f303f6d9c129ed5ebfe240fbdbdaa5bb0ffec43dacb2991bd526a',
+        'url': 'https://github.com/restic/restic/releases/download/v0.9.1/restic_0.9.1_linux_amd64.bz2',
+        'sha256': 'f7f76812fa26ca390029216d1378e5504f18ba5dde790878dfaa84afef29bda7',
         'needs': ['directory:/opt/restic', 'pkg_apt:ca-certificates'],
         'triggers': ['action:unpack_restic'],
         'unless': 'test -f /opt/restic/restic',
