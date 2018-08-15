@@ -1,6 +1,10 @@
 from pipes import quote
 import socket
 
+RESTIC_VERSION = '0.9.1'
+RESTIC_SHA256 = 'f7f76812fa26ca390029216d1378e5504f18ba5dde790878dfaa84afef29bda7'
+
+
 directories = {
     '/opt/restic': {
         'owner': 'root',
@@ -15,19 +19,23 @@ directories = {
 }
 
 downloads = {
-    '/opt/restic/restic.bz2': {
-        'url': 'https://github.com/restic/restic/releases/download/v0.8.1/restic_0.8.1_linux_amd64.bz2',
-        'sha256': '78abad9b589f303f6d9c129ed5ebfe240fbdbdaa5bb0ffec43dacb2991bd526a',
+    '/opt/restic/restic_{version}.bz2'.format(RESTIC_VERSION): {
+        'url': 'https://github.com/restic/restic/releases/download/v{version}/restic_{version}_linux_amd64.bz2'.format(
+            version=RESTIC_VERSION,
+        ),
+        'sha256': RESTIC_SHA256,
         'needs': ['directory:/opt/restic', 'pkg_apt:ca-certificates'],
         'triggers': ['action:unpack_restic'],
-        'unless': 'test -f /opt/restic/restic',
+        'unless': 'test -f /opt/restic/restic_{version}'.format(RESTIC_VERSION),
     }
 }
 
 actions = {
     'unpack_restic': {
-        'command': 'bunzip2 -f /opt/restic/restic.bz2 '
-                   '&& chmod +x /opt/restic/restic',
+        'command': 'bunzip2 -f /opt/restic/restic_{version}.bz2 '
+                   '&& chmod +x /opt/restic/restic_{version} '
+                   '&& rm -f /opt/restic/restic '  # remove old file
+                   '&& ln -s restic_{version} /opt/restic/restic',
         'needs': ['pkg_apt:bzip2'],
         'triggered': True,
     },
