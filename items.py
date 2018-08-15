@@ -19,14 +19,14 @@ directories = {
 }
 
 downloads = {
-    '/opt/restic/restic_{version}.bz2'.format(RESTIC_VERSION): {
+    '/opt/restic/restic_{version}.bz2'.format(version=RESTIC_VERSION): {
         'url': 'https://github.com/restic/restic/releases/download/v{version}/restic_{version}_linux_amd64.bz2'.format(
             version=RESTIC_VERSION,
         ),
         'sha256': RESTIC_SHA256,
         'needs': ['directory:/opt/restic', 'pkg_apt:ca-certificates'],
         'triggers': ['action:unpack_restic'],
-        'unless': 'test -f /opt/restic/restic_{version}'.format(RESTIC_VERSION),
+        'unless': 'test -f /opt/restic/restic_{version}'.format(version=RESTIC_VERSION),
     }
 }
 
@@ -35,7 +35,7 @@ actions = {
         'command': 'bunzip2 -f /opt/restic/restic_{version}.bz2 '
                    '&& chmod +x /opt/restic/restic_{version} '
                    '&& rm -f /opt/restic/restic '  # remove old file
-                   '&& ln -s restic_{version} /opt/restic/restic',
+                   '&& ln -s restic_{version} /opt/restic/restic'.format(version=RESTIC_VERSION),
         'needs': ['pkg_apt:bzip2'],
         'triggered': True,
     },
