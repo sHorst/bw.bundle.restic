@@ -14,10 +14,6 @@ directories = {
     }
 }
 
-pkg_apt = {
-    'bzip2': {'installed': True},
-}
-
 downloads = {
     '/opt/restic/restic.bz2': {
         'url': 'https://github.com/restic/restic/releases/download/v0.8.1/restic_0.8.1_linux_amd64.bz2',
