@@ -147,7 +147,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
                       node_name=node.name,
                    ),
         'needs': [
-            'download:/opt/restic/restic.bz2',
+            'download:/opt/restic/restic_{version}.bz2'.format(version=RESTIC_VERSION),
             'action:print_ssh_key_{host_name}'.format(host_name=backup_host),
             'action:unpack_restic',
             'file:/etc/restic/password_{host_name}'.format(host_name=backup_host),
