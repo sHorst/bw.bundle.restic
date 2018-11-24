@@ -121,7 +121,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
     }
 
     files['/etc/restic/password_{host_name}'.format(host_name=backup_host)] = {
-        'content': repo.libs.pw.get("restic_password_{host_name}_{node_name}".format(
+        'content': repo.vault.password_for("restic_password_{host_name}_{node_name}".format(
             host_name=backup_host,
             node_name=node.name
         )),
