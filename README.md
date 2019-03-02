@@ -9,6 +9,11 @@ Needed Plugins
 
 This Bundle needs the `download.py` item. Which you can find here: (https://github.com/sHorst/bw.item.download)
 
+Known Problems
+--------------
+
+This plugin requires, that rsync is installed on the node. Otherwise it will try to initialise the restic repository every time.
+
 
 Demo Metadata
 -------------
