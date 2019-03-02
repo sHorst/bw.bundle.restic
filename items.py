@@ -1,8 +1,8 @@
 from pipes import quote
 import socket
 
-RESTIC_VERSION = '0.9.1'
-RESTIC_SHA256 = 'f7f76812fa26ca390029216d1378e5504f18ba5dde790878dfaa84afef29bda7'
+RESTIC_VERSION = '0.9.4'
+RESTIC_SHA256 = '0440b6c1c17b58563c729fa133896199406f29356329ca5d048e4d9dcbf7d6fe'
 
 
 directories = {
