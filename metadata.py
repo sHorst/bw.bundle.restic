@@ -4,6 +4,7 @@ def add_apt_packages(metadata):
         metadata.setdefault('apt', {})
         metadata['apt'].setdefault('packages', {})
 
+        metadata['apt']['packages']['rsync'] = {'installed': True}
         metadata['apt']['packages']['bzip2'] = {'installed': True}
         metadata['apt']['packages']['ca-certificates'] = {'installed': True}
 
