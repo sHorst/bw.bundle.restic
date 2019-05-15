@@ -16,11 +16,11 @@ ${pre_cmd}
 
 # stdin backup
 % for name, cmd in sorted(stdin_commands.items()):
-${cmd} | /opt/restic/restic backup --stdin --stdin-filename ${name}
+${cmd} | /opt/restic/restic backup -q --stdin --stdin-filename ${name}
 % endfor
 
 # backup new files
-/opt/restic/restic backup --files-from /etc/restic/include
+/opt/restic/restic backup -q --files-from /etc/restic/include
 
 # post backup
 % for post_cmd in post_commands:
@@ -28,6 +28,6 @@ ${post_cmd}
 % endfor
 
 # remove old files
-/opt/restic/restic forget -l ${keep.get('last', 1)} -H ${keep.get('hourly', 3)} -d ${keep.get('daily', 5)} -w ${keep.get('weekly', 2)} -m ${keep.get('monthly', 5)} -y ${keep.get('yearly', 1)}
+/opt/restic/restic forget -l ${keep.get('last', 1)} -H ${keep.get('hourly', 3)} -d ${keep.get('daily', 5)} -w ${keep.get('weekly', 2)} -m ${keep.get('monthly', 5)} -y ${keep.get('yearly', 1)} -q
 
 rm ${LOCK_FILE}
