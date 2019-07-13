@@ -113,7 +113,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             identity_file=identity_file
         ),
         # we only allow rsync, sftp and scp
-        'unless': 'ssh {host_name} rsync --server --version &>/dev/null || false'.format(host_name=backup_host),
+        'unless': 'ssh {host_name} rsync --server --version || false'.format(host_name=backup_host),
         'needs': [
             'action:create_ssh_key_{host_name}'.format(host_name=backup_host),
             'action:add_ssh_config_{host_name}'.format(host_name=backup_host),
@@ -142,7 +142,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
                    ),
         # we only allow rsync, sftp and scp
         # try to get config file, if it is not present, we will create the repository
-        'unless': 'rsync -n {host_name}:{node_name}/config /tmp &>/dev/null || false'.format(
+        'unless': 'rsync -n {host_name}:{node_name}/config /tmp || false'.format(
                       host_name=backup_host,
                       node_name=node.name,
                    ),
