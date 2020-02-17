@@ -7,6 +7,10 @@ if [ -f ${LOCK_FILE} ]; then
     exit 0
 fi
 
+if [ $(date +%H) -ne ${RUN_HOUR} ]; then
+    exit 0
+fi
+
 touch ${LOCK_FILE}
 
 # pre backup

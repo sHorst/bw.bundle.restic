@@ -1,8 +1,8 @@
 from pipes import quote
 import socket
 
-RESTIC_VERSION = '0.9.5'
-RESTIC_SHA256 = '08cd75e56a67161e9b16885816f04b2bf1fb5b03bc0677b0ccf3812781c1a2ec'
+RESTIC_VERSION = '0.9.6'
+RESTIC_SHA256 = 'a88ca09d1dd051d470965667a224a2b81930c6628a0566b7b17868be40207dc8'
 
 
 directories = {
@@ -165,6 +165,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             'post_commands': node.metadata.get('restic', {}).get('post_commands', []),
             'stdin_commands': node.metadata.get('restic', {}).get('stdin_commands', {}),
             'LOCK_FILE': '/tmp/restic.lock',
+            'RUN_HOUR': node.metadata.get('restic', {}).get('run_hour', 3),
         },
         'source': "cron_hourly.sh",
         'owner': 'root',
@@ -181,6 +182,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             'backup_host': backup_host,
             'node_name': node.name,
             'keep': backup_host_config.get('keep', {}),
+            'LOCK_FILE': '/tmp/restic.lock',
         },
         'source': "cron_daily.sh",
         'owner': 'root',
