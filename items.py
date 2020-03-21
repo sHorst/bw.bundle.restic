@@ -45,6 +45,10 @@ files = {
     '/etc/restic/include': {
         'content': "\n".join(sorted(node.metadata.get('restic', {}).get('backup_folders', []))) + "\n",
         'mode': "0600",
+    },
+    '/etc/restic/exclude': {
+        'content': "\n".join(sorted(node.metadata.get('restic', {}).get('exclude_folders', []))) + "\n",
+        'mode': "0600",
     }
 }
 

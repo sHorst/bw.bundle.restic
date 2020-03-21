@@ -24,7 +24,7 @@ ${cmd} | /opt/restic/restic backup -q --stdin --stdin-filename ${name}
 % endfor
 
 # backup new files
-/opt/restic/restic backup -q --files-from /etc/restic/include
+/opt/restic/restic backup -q --exclude-file /etc/restic/exclude --files-from /etc/restic/include
 
 # post backup
 % for post_cmd in post_commands:
