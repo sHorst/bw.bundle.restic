@@ -21,8 +21,9 @@ def load_public_keys(metadata):
         try:
             backup_node = repo.get_node(backup_host)
             backup_host = backup_node.hostname
+            node_name = backup_node.name
         except NoSuchNode:
-            pass
+            node_name = backup_host
 
         filename = join(repo.path, 'data', 'public_keys', f'{node.name}_{backup_host}.pub')
 
@@ -31,8 +32,8 @@ def load_public_keys(metadata):
             print('\n -- needed to download new file from host, consider adding it to GIT\n')
             node.download(f'/root/.ssh/{backup_host}.pub', filename)
 
-        backup_hosts[backup_host] = {
-            'public_key': get_file_contents(filename),
+        backup_hosts[node_name] = {
+            'public_key': get_file_contents(filename).decode().strip(),
         }
 
     return {
