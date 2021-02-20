@@ -1,6 +1,6 @@
 from os.path import join, isfile
 from bundlewrap.utils import get_file_contents
-from bundlewrap.exceptions import NoSuchNode
+from bundlewrap.exceptions import NoSuchNode, RemoteException
 
 defaults = {}
 
@@ -30,11 +30,15 @@ def load_public_keys(metadata):
         if not isfile(filename):
             # download Node File
             print('\n -- needed to download new file from host, consider adding it to GIT\n')
-            node.download(f'/root/.ssh/{backup_host}.pub', filename)
+            try:
+                node.download(f'/root/.ssh/{backup_host}.pub', filename)
+            except RemoteException:
+                pass
 
-        backup_hosts[node_name] = {
-            'public_key': get_file_contents(filename).decode().strip(),
-        }
+        if isfile(filename):
+            backup_hosts[node_name] = {
+                'public_key': get_file_contents(filename).decode().strip(),
+            }
 
     return {
         'restic': {
