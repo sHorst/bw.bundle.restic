@@ -1,4 +1,5 @@
 from os.path import join, isfile
+from os import system
 from bundlewrap.utils import get_file_contents
 from bundlewrap.exceptions import NoSuchNode
 
@@ -28,9 +29,16 @@ def load_public_keys(metadata):
         filename = join(repo.path, 'data', 'public_keys', f'{node.name}_{backup_host}.pub')
 
         if not isfile(filename):
-            # download Node File
-            print('\n -- needed to download new file from host, consider adding it to GIT\n')
-            node.download(f'/root/.ssh/{backup_host}.pub', filename)
+            try:
+                # check if host is up
+                if system("ping -c 1 -t 1 " + node.hostname) == 0:
+                    # download Node File
+                    print('\n -- needed to download new file from host, consider adding it to GIT\n')
+                    node.download(f'/root/.ssh/{backup_host}.pub', filename)
+                continue
+            except Exception:
+                # ignore any exception
+                continue
 
         backup_hosts[node_name] = {
             'public_key': get_file_contents(filename).decode().strip(),
