@@ -3,6 +3,8 @@ from os import system
 from bundlewrap.utils import get_file_contents
 from bundlewrap.exceptions import NoSuchNode, RemoteException
 
+global metadata_reactor, node, repo
+
 defaults = {}
 
 if node.has_bundle("apt"):

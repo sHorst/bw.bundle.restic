@@ -2,8 +2,10 @@ from pipes import quote
 from bundlewrap.exceptions import NoSuchNode
 import socket
 
-RESTIC_VERSION = '0.9.6'
-RESTIC_SHA256 = 'a88ca09d1dd051d470965667a224a2b81930c6628a0566b7b17868be40207dc8'
+global node, repo
+
+RESTIC_VERSION = '0.15.1'
+RESTIC_SHA256 = '3631e3c3833c84ba71f22ea3df20381676abc7476a7f6d14424d9abfada91414'
 
 
 directories = {
