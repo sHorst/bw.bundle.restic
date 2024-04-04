@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 export RESTIC_PASSWORD_FILE=/etc/restic/password_${backup_host}
-export RESTIC_REPOSITORY=sftp://${backup_host}/${node_name}
+export RESTIC_REPOSITORY=${restic_repository}
 
 if [ -f ${LOCK_FILE} ]; then
     exit 0

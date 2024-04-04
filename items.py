@@ -56,7 +56,7 @@ files = {
 
 
 for backup_host, backup_host_config in node.metadata.get('restic', {}).get('backup_hosts', {}).items():
-    if backup_host_config.get('backend_type', 'sftp') == 'sftp':
+    if backup_host_config.get('repository_type', 'sftp') == 'sftp':
         try:
             backup_node = repo.get_node(backup_host)
             backup_host = backup_node.hostname
@@ -141,7 +141,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             ]
         }
 
-        backend_url = f'sftp://{backup_host}/{node.name}'
+        repository_url = f'sftp://{backup_host}/{node.name}'
 
         actions[f'check_init_restic_{backup_host}_sftp'] = {
             'command': 'echo "dummy command"',
@@ -154,6 +154,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         }
 
     if backup_host_config.get('backend_type') == 's3':
+        repository_url = 's3://{backup_host}/{node.name}'
         pass
 
     files[f'/etc/restic/password_{backup_host}'] = {
@@ -166,7 +167,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
     actions[f'init_restic_{backup_host}'] = {
         'command': '/opt/restic/restic '
                    '--password-file /etc/restic/password_{host_name} '
-                   f'-r {backend_url} '
+                   f'-r {repository_url} '
                    'init',
         'triggered': True,
         'needs': [
@@ -181,6 +182,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
     files['/etc/cron.hourly/restic_{host_name}'.format(host_name=backup_host.replace('.', '_'))] = {
         'content_type': "mako",
         'context': {
+            'restic_repository': repository_url,
             'backup_host': backup_host,
             'node_name': node.name,
             'keep': backup_host_config.get('keep', {}),
@@ -202,6 +204,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
     files['/etc/cron.daily/restic_{host_name}'.format(host_name=backup_host.replace('.', '_'))] = {
         'content_type': "mako",
         'context': {
+            'restic_repository': repository_url,
             'backup_host': backup_host,
             'node_name': node.name,
             'keep': backup_host_config.get('keep', {}),
