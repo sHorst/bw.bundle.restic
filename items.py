@@ -4,8 +4,8 @@ import socket
 
 global node, repo
 
-RESTIC_VERSION = '0.16.0'
-RESTIC_SHA256 = '492387572bb2c4de904fa400636e05492e7200b331335743d46f2f2874150162'
+RESTIC_VERSION = node.metadata.get('restic').get('version')
+RESTIC_SHA256 = node.metadata.get('restic').get('checksum_sha256')
 
 
 directories = {
