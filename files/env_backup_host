@@ -1,0 +1,5 @@
+export RESTIC_PASSWORD_FILE=/etc/restic/password_${backup_host}
+export RESTIC_REPOSITORY=${repository_url}
+% for key,value in environment_vars.items():
+export ${key}=${value}
+% endfor

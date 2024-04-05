@@ -5,7 +5,12 @@ from bundlewrap.exceptions import NoSuchNode, RemoteException
 
 global metadata_reactor, node, repo
 
-defaults = {}
+defaults = {
+    'restic': {
+        'version': '0.16.4',
+        'checksum_sha256': '3d4d43c169a9e28ea76303b1e8b810f0dcede7478555fdaa8959971ad499e324',
+    }
+}
 
 if node.has_bundle("apt"):
     defaults['apt'] = {
@@ -21,6 +26,10 @@ if node.has_bundle("apt"):
 def load_public_keys(metadata):
     backup_hosts = {}
     for backup_host, config in metadata.get('restic/backup_hosts', {}).items():
+        # Skip all none-sftp repositories
+        if config.get('repository_type', 'sftp') != 'sftp':
+            continue
+
         try:
             backup_node = repo.get_node(backup_host)
             backup_host = backup_node.hostname

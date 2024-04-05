@@ -4,8 +4,8 @@ import socket
 
 global node, repo
 
-RESTIC_VERSION = '0.16.0'
-RESTIC_SHA256 = '492387572bb2c4de904fa400636e05492e7200b331335743d46f2f2874150162'
+RESTIC_VERSION = node.metadata.get('restic').get('version')
+RESTIC_SHA256 = node.metadata.get('restic').get('checksum_sha256')
 
 
 directories = {
@@ -56,89 +56,96 @@ files = {
 
 
 for backup_host, backup_host_config in node.metadata.get('restic', {}).get('backup_hosts', {}).items():
-    try:
-        backup_node = repo.get_node(backup_host)
-        backup_host = backup_node.hostname
-        backup_host_ips = backup_node.metadata.get('interfaces', {}) \
-            .get(backup_node.metadata.get('main_interface', 'eth0'), {}) \
-            .get('ip_addresses', [])
+    if backup_host_config.get('repository_type', 'sftp') in ['s3', 'minio']:
+        repository_url = f"s3:{backup_host_config.get('address')}/{backup_host_config.get('bucket_name', node.name)}"
+    else: # Use sftp Repository
+        repository_url = f'sftp://{backup_host}/{node.name}'
+        try:
+            backup_node = repo.get_node(backup_host)
+            backup_host = backup_node.hostname
+            backup_host_ips = backup_node.metadata.get('interfaces', {}) \
+                .get(backup_node.metadata.get('main_interface', 'eth0'), {}) \
+                .get('ip_addresses', [])
 
-        host_key = backup_node.metadata['openssh']['hostkey']  # This will break!!, if it is not set!
-    except NoSuchNode:
-        # TODO: make work without internet
-        backup_host_ips = [socket.gethostbyname(backup_host), ]
-        host_key = backup_host_config.get('hostkey')  # This should break, if it is not set!
+            host_key = backup_node.metadata['openssh']['hostkey']  # This will break!!, if it is not set!
+        except NoSuchNode:
+            # TODO: make work without internet
+            backup_host_ips = [socket.gethostbyname(backup_host), ]
+            host_key = backup_host_config.get('hostkey')  # This should break, if it is not set!
 
-    identity_file = f"~/.ssh/{backup_host}"
-    port = backup_host_config.get('port', 22)
+        identity_file = f"~/.ssh/{backup_host}"
+        port = backup_host_config.get('port', 22)
 
-    actions[f'create_ssh_key_{backup_host}'] = {
-        'command': 'ssh-keygen -t ed25519 -f ~/.ssh/{host_name} -C {comment} -N ""'.format(
-            host_name=backup_host,
-            comment=quote(node.name)
-        ),
-        'unless': f'test -f ~/.ssh/{backup_host}',
-    }
-    # node.download(f'/root/.ssh/{backup_host}.pub', 'test123')
-    actions[f'add_ssh_config_{backup_host}'] = {
-        'command': 'echo "Host {host_name}\\n'
-                   'user {backup_user}\\n'
-                   'identityfile {identity_file}\\n'
-                   'port {port}"'
-                   ' >> ~/.ssh/config'.format(
-                        host_name=backup_host,
-                        backup_user=backup_host_config.get('username', 'scoutnetbackup'),
-                        identity_file=identity_file,
-                        port=port,
-                   ),
-        'unless': f'grep -q \'{backup_host}\' ~/.ssh/config',
-    }
+        actions[f'create_ssh_key_{backup_host}'] = {
+            'command': 'ssh-keygen -t ed25519 -f ~/.ssh/{host_name} -C {comment} -N ""'.format(
+                host_name=backup_host,
+                comment=quote(node.name)
+            ),
+            'unless': f'test -f ~/.ssh/{backup_host}',
+        }
+        # node.download(f'/root/.ssh/{backup_host}.pub', 'test123')
+        actions[f'add_ssh_config_{backup_host}'] = {
+            'command': 'echo "Host {host_name}\\n'
+                       'user {backup_user}\\n'
+                       'identityfile {identity_file}\\n'
+                       'port {port}"'
+                       ' >> ~/.ssh/config'.format(
+                            host_name=backup_host,
+                            backup_user=backup_host_config.get('username', 'scoutnetbackup'),
+                            identity_file=identity_file,
+                            port=port,
+                       ),
+            'unless': f'grep -q \'{backup_host}\' ~/.ssh/config',
+        }
 
-    # add hostkey for hostname in known hosts file
-    ssh_known_hosts_host_name = backup_host
-    if port != 22:
-        ssh_known_hosts_host_name = f"[{backup_host}]:{port}"
-
-    actions[f'add_known_host_{backup_host}'] = {
-        'command': 'echo {host_name} {host_key} >> ~/.ssh/known_hosts'.format(
-            host_name=quote(ssh_known_hosts_host_name),
-            host_key=quote(host_key)
-        ),
-        'unless': 'grep -q {host_name} ~/.ssh/known_hosts'.format(
-            host_name=quote(ssh_known_hosts_host_name).replace('[', '\\[').replace(']', '\\]')
-        ),
-    }
-
-    # add hostkey for ip in known hosts file
-    for backup_host_ip in backup_host_ips:
-        ssh_known_hosts_host_ip = backup_host_ip
+        # add hostkey for hostname in known hosts file
+        ssh_known_hosts_host_name = backup_host
         if port != 22:
-            ssh_known_hosts_host_ip = f"[{backup_host_ip}]:{port}"
+            ssh_known_hosts_host_name = f"[{backup_host}]:{port}"
 
-        actions[f'add_known_host_{backup_host_ip}'] = {
-            'command': 'echo {host_ip} {host_key} >> ~/.ssh/known_hosts'.format(
-                host_ip=quote(ssh_known_hosts_host_ip),
+        actions[f'add_known_host_{backup_host}'] = {
+            'command': 'echo {host_name} {host_key} >> ~/.ssh/known_hosts'.format(
+                host_name=quote(ssh_known_hosts_host_name),
                 host_key=quote(host_key)
             ),
-            'unless': 'grep -q {host_ip} ~/.ssh/known_hosts'.format(
-                host_ip=quote(ssh_known_hosts_host_ip).replace('[', '\\[').replace(']', '\\]')
+            'unless': 'grep -q {host_name} ~/.ssh/known_hosts'.format(
+                host_name=quote(ssh_known_hosts_host_name).replace('[', '\\[').replace(']', '\\]')
             ),
         }
 
-    actions[f'print_ssh_key_{backup_host}'] = {
-        'command': 'echo "please register this ssh key on {host_name}:" && cat {identity_file}.pub && exit 255'.format(
-            host_name=backup_host,
-            identity_file=identity_file
-        ),
-        # we only allow rsync, sftp and scp
-        'unless': 'ssh {host_name} rsync --server --version || false'.format(host_name=backup_host),
-        'needs': [
-            'action:create_ssh_key_{host_name}'.format(host_name=backup_host),
-            'action:add_ssh_config_{host_name}'.format(host_name=backup_host),
-            'action:add_known_host_{host_name}'.format(host_name=backup_host),
-            # 'action:add_known_host_{host_ip}'.format(host_ip=backup_host_ip),
-        ]
-    }
+        # add hostkey for ip in known hosts file
+        for backup_host_ip in backup_host_ips:
+            ssh_known_hosts_host_ip = backup_host_ip
+            if port != 22:
+                ssh_known_hosts_host_ip = f"[{backup_host_ip}]:{port}"
+
+            actions[f'add_known_host_{backup_host_ip}'] = {
+                'command': 'echo {host_ip} {host_key} >> ~/.ssh/known_hosts'.format(
+                    host_ip=quote(ssh_known_hosts_host_ip),
+                    host_key=quote(host_key)
+                ),
+                'unless': 'grep -q {host_ip} ~/.ssh/known_hosts'.format(
+                    host_ip=quote(ssh_known_hosts_host_ip).replace('[', '\\[').replace(']', '\\]')
+                ),
+            }
+
+        actions[f'print_ssh_key_{backup_host}'] = {
+            'command': 'echo "please register this ssh key on {host_name}:" && cat {identity_file}.pub && exit 255'.format(
+                host_name=backup_host,
+                identity_file=identity_file
+            ),
+            # we only allow rsync, sftp and scp
+            'unless': 'ssh {host_name} rsync --server --version || false'.format(host_name=backup_host),
+            'needs': [
+                'action:create_ssh_key_{host_name}'.format(host_name=backup_host),
+                'action:add_ssh_config_{host_name}'.format(host_name=backup_host),
+                'action:add_known_host_{host_name}'.format(host_name=backup_host),
+                # 'action:add_known_host_{host_ip}'.format(host_ip=backup_host_ip),
+            ],
+            'tags': [
+                f'prepare_restic_backup_{backup_host}',
+            ]
+        }
 
     files[f'/etc/restic/password_{backup_host}'] = {
         'content': repo.vault.password_for(f"restic_password_{backup_host}_{node.name}").value,
@@ -147,22 +154,31 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         'mode': '0600',
     }
 
+    files[f'/etc/restic/env_{backup_host}'] = {
+        'content_type': "mako",
+        'context': {
+            'repository_url': repository_url,
+            'backup_host': backup_host,
+            'environment_vars': backup_host_config.get('environment_vars', []),
+        },
+        'source': 'env_backup_host',
+        'owner': 'root',
+        'group': 'root',
+        'mode': '0600',
+    }
+
     actions[f'init_restic_{backup_host}'] = {
-        'command': '/opt/restic/restic '
-                   '--password-file /etc/restic/password_{host_name} '
-                   '-r sftp://{host_name}/{node_name} '
-                   'init'.format(
-                        host_name=backup_host,
-                        node_name=node.name
-                   ),
-        # we only allow rsync, sftp and scp
-        # try to get config file, if it is not present, we will create the repository
-        'unless': f'rsync -n {backup_host}:{node.name}/config /tmp || false',
+        'command': f'. /etc/restic/env_{backup_host} && /opt/restic/restic '
+                   f'--password-file /etc/restic/password_{backup_host} '
+                   f'-r {repository_url} '
+                   'init',
+        'unless': f'. /etc/restic/env_{backup_host} && /opt/restic/restic -r {repository_url} cat config',
         'needs': [
             f'download:/opt/restic/restic_{RESTIC_VERSION}.bz2',
-            f'action:print_ssh_key_{backup_host}',
+            f'tag:prepare_restic_backup_{backup_host}',
             'action:unpack_restic',
             f'file:/etc/restic/password_{backup_host}',
+            f'file:/etc/restic/env_{backup_host}',
         ],
     }
 
@@ -170,8 +186,8 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
     files['/etc/cron.hourly/restic_{host_name}'.format(host_name=backup_host.replace('.', '_'))] = {
         'content_type': "mako",
         'context': {
+            'restic_repository': repository_url,
             'backup_host': backup_host,
-            'node_name': node.name,
             'keep': backup_host_config.get('keep', {}),
             'pre_commands': node.metadata.get('restic', {}).get('pre_commands', []),
             'post_commands': node.metadata.get('restic', {}).get('post_commands', []),
@@ -191,8 +207,8 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
     files['/etc/cron.daily/restic_{host_name}'.format(host_name=backup_host.replace('.', '_'))] = {
         'content_type': "mako",
         'context': {
+            'restic_repository': repository_url,
             'backup_host': backup_host,
-            'node_name': node.name,
             'keep': backup_host_config.get('keep', {}),
             'LOCK_FILE': f'/tmp/restic_{backup_host}.lock',
         },
