@@ -56,7 +56,10 @@ files = {
 
 
 for backup_host, backup_host_config in node.metadata.get('restic', {}).get('backup_hosts', {}).items():
-    if backup_host_config.get('repository_type', 'sftp') == 'sftp':
+    if backup_host_config.get('repository_type', 'sftp') in ['s3', 'minio']:
+        repository_url = f"s3:{backup_host_config.get('address')}/{backup_host_config.get('bucket_name', node.name)}"
+    else: # Use sftp Repository
+        repository_url = f'sftp://{backup_host}/{node.name}'
         try:
             backup_node = repo.get_node(backup_host)
             backup_host = backup_node.hostname
@@ -138,24 +141,11 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
                 'action:add_ssh_config_{host_name}'.format(host_name=backup_host),
                 'action:add_known_host_{host_name}'.format(host_name=backup_host),
                 # 'action:add_known_host_{host_ip}'.format(host_ip=backup_host_ip),
+            ],
+            'tags': [
+                f'prepare_restic_backup_{backup_host}',
             ]
         }
-
-        repository_url = f'sftp://{backup_host}/{node.name}'
-
-        actions[f'check_init_restic_{backup_host}_sftp'] = {
-            'command': 'echo "dummy command"',
-            # we only allow rsync, sftp and scp
-            # try to get config file, if it is not present, we will create the repository
-            'unless': f'rsync -n {backup_host}:{node.name}/config /tmp || false',
-            'triggers': [
-                f'action:init_restic_{backup_host}',
-            ]
-        }
-
-    if backup_host_config.get('backend_type') == 's3':
-        repository_url = 's3://{backup_host}/{node.name}'
-        pass
 
     files[f'/etc/restic/password_{backup_host}'] = {
         'content': repo.vault.password_for(f"restic_password_{backup_host}_{node.name}").value,
@@ -169,7 +159,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
                    '--password-file /etc/restic/password_{host_name} '
                    f'-r {repository_url} '
                    'init',
-        'triggered': True,
+        'unless': f'/opt/restic/restic -r {repository_url} cat config',
         'needs': [
             f'download:/opt/restic/restic_{RESTIC_VERSION}.bz2',
             f'action:print_ssh_key_{backup_host}',
