@@ -26,6 +26,10 @@ if node.has_bundle("apt"):
 def load_public_keys(metadata):
     backup_hosts = {}
     for backup_host, config in metadata.get('restic/backup_hosts', {}).items():
+        # Skip all none-sftp repositories
+        if config.get('repository_type', 'sftp') != 'sftp':
+            continue
+
         try:
             backup_node = repo.get_node(backup_host)
             backup_host = backup_node.hostname
