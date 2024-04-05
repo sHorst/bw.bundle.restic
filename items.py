@@ -186,7 +186,6 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         'context': {
             'restic_repository': repository_url,
             'backup_host': backup_host,
-            'node_name': node.name,
             'keep': backup_host_config.get('keep', {}),
             'pre_commands': node.metadata.get('restic', {}).get('pre_commands', []),
             'post_commands': node.metadata.get('restic', {}).get('post_commands', []),
@@ -208,7 +207,6 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         'context': {
             'restic_repository': repository_url,
             'backup_host': backup_host,
-            'node_name': node.name,
             'keep': backup_host_config.get('keep', {}),
             'LOCK_FILE': f'/tmp/restic_{backup_host}.lock',
         },
