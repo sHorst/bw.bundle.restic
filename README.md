@@ -1,7 +1,7 @@
 Restic Bundle
 -------------
 
-This Bundle Downloads and Configures Restic (https://restic.net/). 
+This Bundle Downloads and Configures Restic (https://restic.net/).
 It will pin your Backups server host key.
 
 Needed Plugins
@@ -22,6 +22,7 @@ Demo Metadata
 'restic': {
     'backup_hosts': {
         'backup.mydomain.net': {
+            #'repository_type': 'sftp',
             'username': 'myBackupUser',
             'port': 12345,
             'hostkey': 'ecdsa-sha2-nistp256 ...',
@@ -33,7 +34,24 @@ Demo Metadata
                 'monthly': 5,
                 'yearly': 1,
             }
-        }
+        },
+        'minio.example.org': {
+            'repository_type': 'minio',
+            'address': 'https://localhost:9000',
+            #'bucket_name': node.name,
+            'environment_vars': {
+                'AWS_ACCESS_KEY_ID': 'foobar',
+                'AWS_SECRET_ACCESS_KEY': vault.decrypt('...').value,
+            },
+            'keep': {
+                'last': 1,
+                'hourly': 3,
+                'daily': 5,
+                'weekly': 2,
+                'monthly': 5,
+                'yearly': 1,
+            }
+        },
     },
     'backup_folders': [
         '/etc',
