@@ -154,17 +154,29 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         'mode': '0600',
     }
 
+    files[f'/etc/restic/env_{backup_host}'] = {
+        'content_type': "mako",
+        'context': {
+            'environment_vars': backup_host_config.get('environment_vars', []),
+        },
+        'source': 'env_backup_host',
+        'owner': 'root',
+        'group': 'root',
+        'mode': '0600',
+    }
+
     actions[f'init_restic_{backup_host}'] = {
-        'command': '/opt/restic/restic '
-                   '--password-file /etc/restic/password_{host_name} '
+        'command': f'. /etc/restic/env_{backup_host} && /opt/restic/restic '
+                   f'--password-file /etc/restic/password_{backup_host} '
                    f'-r {repository_url} '
                    'init',
         'unless': f'/opt/restic/restic -r {repository_url} cat config',
         'needs': [
             f'download:/opt/restic/restic_{RESTIC_VERSION}.bz2',
-            f'action:print_ssh_key_{backup_host}',
+            f'tag:prepare_restic_backup_{backup_host}',
             'action:unpack_restic',
             f'file:/etc/restic/password_{backup_host}',
+            f'file:/etc/restic/env_{backup_host}',
         ],
     }
 

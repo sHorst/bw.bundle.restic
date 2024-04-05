@@ -1,0 +1,3 @@
+% for key,value in environment_vars.items():
+export ${key}=${value}
+% endfor

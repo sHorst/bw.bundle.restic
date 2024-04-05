@@ -2,6 +2,7 @@
 
 export RESTIC_PASSWORD_FILE=/etc/restic/password_${backup_host}
 export RESTIC_REPOSITORY=${restic_repository}
+. /etc/restic/env_${backup_host}
 
 if [ -f ${LOCK_FILE} ]; then
     exit 0
