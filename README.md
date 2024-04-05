@@ -35,8 +35,8 @@ Demo Metadata
             }
         }
     },
-    'backup_folders': {
+    'backup_folders': [
         '/etc',
-    },
+    ],
 }
 ```
