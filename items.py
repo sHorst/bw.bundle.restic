@@ -159,7 +159,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         'context': {
             'repository_url': repository_url,
             'backup_host': backup_host,
-            'environment_vars': backup_host_config.get('environment_vars', []),
+            'environment_vars': backup_host_config.get('environment_vars', {}),
         },
         'source': 'env_backup_host',
         'owner': 'root',
