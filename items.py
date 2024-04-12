@@ -59,7 +59,6 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
     if backup_host_config.get('repository_type', 'sftp') in ['s3', 'minio']:
         repository_url = f"s3:{backup_host_config.get('address')}/{backup_host_config.get('bucket_name', node.name)}"
     else: # Use sftp Repository
-        repository_url = f'sftp://{backup_host}/{node.name}'
         try:
             backup_node = repo.get_node(backup_host)
             backup_host = backup_node.hostname
@@ -73,6 +72,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             backup_host_ips = [socket.gethostbyname(backup_host), ]
             host_key = backup_host_config.get('hostkey')  # This should break, if it is not set!
 
+        repository_url = f'sftp://{backup_host}/{node.name}'
         identity_file = f"~/.ssh/{backup_host}"
         port = backup_host_config.get('port', 22)
 
