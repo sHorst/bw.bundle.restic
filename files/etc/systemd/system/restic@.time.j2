@@ -1,0 +1,7 @@
+[Unit]
+Description=Run restic@%i.service at specific time
+
+[Timer]
+OnCalendar={{ backup_time }}
+Unit=restic@%i.service
+RandomizedDelay={{ randomized_delay }}

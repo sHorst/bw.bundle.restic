@@ -1,0 +1,22 @@
+[Unit]
+Description=Run restic backup and backup to %I
+AssertPathExists=/etc/restic/env_%i
+AssertPathExists=/etc/restic/password_%i
+After=network.target
+
+[Exec]
+User={{ user }}
+AmbientCapabilities=CAP_DAC_READ_SEARCH
+ProtectSystem=strict
+PrivateTmp=true
+ReadWritePaths=/etc/restic
+
+
+[Service]
+Type=oneshot
+Environment=RESTIC_CACHE_DIR=/etc/restic/.cache
+EnvironmentFile=/etc/restic/env_%i
+ExecStart=/etc/restic/restic_run.sh
+
+[Install]
+WantedBy=mutli-user.target
