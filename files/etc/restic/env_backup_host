@@ -1,0 +1,12 @@
+export RESTIC_PASSWORD_FILE=/etc/restic/password_${backup_host}
+export RESTIC_REPOSITORY=${repository_url}
+export KEEP_LAST=${backup_host_config.get('keep', {}).get('last', 1)}
+export KEEP_HOURLY=${backup_host_config.get('keep', {}).get('hourly', 3)}
+export KEEP_DAILY=${backup_host_config.get('keep', {}).get('daily', 5)}
+export KEEP_WEEKLY=${backup_host_config.get('keep', {}).get('weekly', 2)}
+export KEEP_MONTHLY=${backup_host_config.get('keep', {}).get('monthly', 5)}
+export KEEP_YEARLY=${backup_host_config.get('keep', {}).get('yearly', 1)}
+export LOCK_FILE=/tmp/restic_${backup_host}.lock
+% for key,value in backup_host_config.get('environment_vars', {}).items():
+export ${key}=${value}
+% endfor

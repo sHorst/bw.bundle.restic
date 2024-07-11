@@ -161,9 +161,9 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         'context': {
             'repository_url': repository_url,
             'backup_host': backup_host,
-            'environment_vars': backup_host_config.get('environment_vars', {}),
+            'backup_host_config': backup_host_config,
         },
-        'source': 'env_backup_host',
+        'source': 'etc/restic/env_backup_host',
         'owner': RESTIC_USER,
         'group': RESTIC_GROUP,
         'mode': '0600',
@@ -190,12 +190,9 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         'context': {
             'restic_repository': repository_url,
             'backup_host': backup_host,
-            'keep': backup_host_config.get('keep', {}),
             'pre_commands': node.metadata.get('restic', {}).get('pre_commands', []),
             'post_commands': node.metadata.get('restic', {}).get('post_commands', []),
             'stdin_commands': node.metadata.get('restic', {}).get('stdin_commands', {}),
-            'LOCK_FILE': f'/tmp/restic_{backup_host}.lock',
-            'RUN_HOUR': node.metadata.get('restic', {}).get('run_hour', 3),
         },
         'source': "cron_hourly.sh",
         'owner': RESTIC_USER,
@@ -211,8 +208,6 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         'context': {
             'restic_repository': repository_url,
             'backup_host': backup_host,
-            'keep': backup_host_config.get('keep', {}),
-            'LOCK_FILE': f'/tmp/restic_{backup_host}.lock',
         },
         'source': "cron_daily.sh",
         'owner': RESTIC_USER,
