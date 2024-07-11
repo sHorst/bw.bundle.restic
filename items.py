@@ -6,17 +6,19 @@ global node, repo
 
 RESTIC_VERSION = node.metadata.get('restic').get('version')
 RESTIC_SHA256 = node.metadata.get('restic').get('checksum_sha256')
+RESTIC_USER = node.metadata.get('restic').get('user')
+RESTIC_GROUP = node.metadata.get('restic').get('group')
 
 
 directories = {
     '/opt/restic': {
-        'owner': 'root',
-        'group': 'root',
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': "0751",
     },
     '/etc/restic': {
-        'owner': 'root',
-        'group': 'root',
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': "0700",
     }
 }
@@ -149,8 +151,8 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
 
     files[f'/etc/restic/password_{backup_host}'] = {
         'content': repo.vault.password_for(f"restic_password_{backup_host}_{node.name}").value,
-        'owner': 'root',
-        'group': 'root',
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': '0600',
     }
 
@@ -162,8 +164,8 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             'environment_vars': backup_host_config.get('environment_vars', {}),
         },
         'source': 'env_backup_host',
-        'owner': 'root',
-        'group': 'root',
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': '0600',
     }
 
@@ -196,8 +198,8 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             'RUN_HOUR': node.metadata.get('restic', {}).get('run_hour', 3),
         },
         'source': "cron_hourly.sh",
-        'owner': 'root',
-        'group': 'root',
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': '0755',
         'needs': [
             f'action:init_restic_{backup_host}',
@@ -213,8 +215,8 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             'LOCK_FILE': f'/tmp/restic_{backup_host}.lock',
         },
         'source': "cron_daily.sh",
-        'owner': 'root',
-        'group': 'root',
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': '0755',
         'needs': [
             f'action:init_restic_{backup_host}',
