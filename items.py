@@ -9,6 +9,13 @@ RESTIC_SHA256 = node.metadata.get('restic').get('checksum_sha256')
 RESTIC_USER = node.metadata.get('restic').get('user')
 RESTIC_GROUP = node.metadata.get('restic').get('group')
 
+users = {
+    RESTIC_USER: {
+        'home': '/etc/restic',
+        'shell': '/sbin/nologin',
+        'password_hash': '*',
+    }
+}
 
 directories = {
     '/opt/restic': {
