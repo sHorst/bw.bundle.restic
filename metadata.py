@@ -11,6 +11,7 @@ defaults = {
         'checksum_sha256': '3d4d43c169a9e28ea76303b1e8b810f0dcede7478555fdaa8959971ad499e324',
         'user': 'root',
         'group': 'root',
+        'backup_time': '*-*-* 03:00:00 UTC',
     }
 }
 
@@ -60,4 +61,17 @@ def load_public_keys(metadata):
         'restic': {
             'backup_hosts': backup_hosts,
         }
+    }
+
+# Be backward compatible and set backup_time if run_hour isn't default
+@metadata_reactor
+def generate_backup_time(metadata):
+    run_hour = metadata.get('restic/run_hour', 3)
+    if run_hour == 3:
+        raise DoNotRunAgain
+
+    return {
+        'restic': {
+            'backup_time': f'*-*-* {run_hour}:00:00 UTC',
+        },
     }
