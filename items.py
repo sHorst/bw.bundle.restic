@@ -65,10 +65,14 @@ svc_systemd = {}
 files = {
     '/etc/restic/include': {
         'content': "\n".join(sorted(node.metadata.get('restic', {}).get('backup_folders', []))) + "\n",
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': "0600",
     },
     '/etc/restic/exclude': {
         'content': "\n".join(sorted(node.metadata.get('restic', {}).get('exclude_folders', []))) + "\n",
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': "0600",
     },
     '/etc/systemd/system/restic@.service': {
