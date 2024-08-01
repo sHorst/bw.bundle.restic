@@ -9,8 +9,8 @@ defaults = {
     'restic': {
         'version': '0.16.4',
         'checksum_sha256': '3d4d43c169a9e28ea76303b1e8b810f0dcede7478555fdaa8959971ad499e324',
-        'user': 'root',
-        'group': 'root',
+        'user': 'restic',
+        'group': 'restic',
         'backup_time': '*-*-* 03:00:00 UTC',
     }
 }

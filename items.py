@@ -53,6 +53,10 @@ actions = {
     'restic_systemd_daemon_reload': {
         'command': 'systemctl daemon-reload',
         'triggered': True,
+    },
+    'restic_chown_home': {
+        'command': f'chmod -R {RESTIC_USER}:{RESTIC_GROUP} /etc/restic',
+        'unless': f'test -z "$(find /etc/restic ! -user {RESTIC_USER})"'
     }
 }
 
