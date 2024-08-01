@@ -6,6 +6,7 @@ global node, repo
 
 RESTIC_VERSION = node.metadata.get('restic').get('version')
 RESTIC_SHA256 = node.metadata.get('restic').get('checksum_sha256')
+RESTIC_ARCH = node.metadata.get('restic').get('arch')
 RESTIC_USER = node.metadata.get('restic').get('user')
 RESTIC_GROUP = node.metadata.get('restic').get('group')
 
@@ -32,8 +33,7 @@ directories = {
 
 downloads = {
     f'/opt/restic/restic_{RESTIC_VERSION}.bz2': {
-        'url': f'https://github.com/restic/restic/releases/download/v{RESTIC_VERSION}/restic_{RESTIC_VERSION}'
-                '_linux_amd64.bz2',
+        'url': f'https://github.com/restic/restic/releases/download/v{RESTIC_VERSION}/restic_{RESTIC_VERSION}_{RESTIC_ARCH}.bz2',
         'sha256': RESTIC_SHA256,
         'needs': ['directory:/opt/restic', 'pkg_apt:ca-certificates'],
         'triggers': ['action:unpack_restic'],

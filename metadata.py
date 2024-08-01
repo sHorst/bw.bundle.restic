@@ -9,6 +9,7 @@ defaults = {
     'restic': {
         'version': '0.17.0',
         'checksum_sha256': 'fec7ade9f12c30bd6323568dbb0f81a3f98a3c86acc8161590235c0f18194022',
+        'arch': 'linux_amd64',
         'user': 'restic',
         'group': 'restic',
         'backup_time': '*-*-* 03:00:00 UTC',
