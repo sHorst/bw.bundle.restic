@@ -1,20 +1,21 @@
 [Unit]
-Description=Run restic backup and backup to %I
+Description=Run restic cleanup on backup host %I
 AssertPathExists=/etc/restic/env_%i
 AssertPathExists=/etc/restic/password_%i
 After=network.target
 
-[Service]
-Type=oneshot
+[Exec]
 User={{ user }}
 AmbientCapabilities=CAP_DAC_READ_SEARCH
 ProtectSystem=strict
 PrivateTmp=true
 ReadWritePaths=/etc/restic
-WorkingDirectory=/etc/restic
-Environment="RESTIC_CACHE_DIR=/etc/restic/.cache"
+
+[Service]
+Type=oneshot
+Environment=RESTIC_CACHE_DIR=/etc/restic/.cache
 EnvironmentFile=/etc/restic/env_%i
-ExecStart=/etc/restic/restic_run.sh
+ExecStart=/etc/restic/restic_cleanup.sh
 
 [Install]
 WantedBy=mutli-user.target

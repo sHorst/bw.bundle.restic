@@ -1,0 +1,7 @@
+[Unit]
+Description=Run restic_cleanup@%i.service once a day
+
+[Timer]
+OnCalendar=daily
+AccuracySec=12h
+Unit=restic_cleanup@%i.service

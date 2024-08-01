@@ -43,7 +43,13 @@ actions = {
         'needs': ['pkg_apt:bzip2'],
         'triggered': True,
     },
+    'restic_systemd_daemon_reload': {
+        'command': 'systemctl daemon-reload',
+        'triggered': True,
+    }
 }
+
+svc_systemd = {}
 
 files = {
     '/etc/restic/include': {
@@ -53,7 +59,76 @@ files = {
     '/etc/restic/exclude': {
         'content': "\n".join(sorted(node.metadata.get('restic', {}).get('exclude_folders', []))) + "\n",
         'mode': "0600",
-    }
+    },
+    '/etc/systemd/system/restic@.service': {
+        'source': 'etc/systemd/system/restic@.service.j2',
+        'content_type': 'jinja2',
+        'context': {
+            'user': RESTIC_USER,
+        },
+        'owner': 'root',
+        'group': 'root',
+        'triggers': [
+            'action:restic_systemd_daemon_reload'
+        ],
+    },
+    '/etc/systemd/system/restic@.timer': {
+        'source': 'etc/systemd/system/restic@.timer.j2',
+        'content_type': 'jinja2',
+        'context': {
+            'backup_time': node.metadata.get('restic', {}).get('backup_time'),
+        },
+        'owner': 'root',
+        'group': 'root',
+        'triggers': [
+            'action:restic_systemd_daemon_reload'
+        ],
+    },
+    '/etc/systemd/system/restic_cleanup@.service': {
+        'source': 'etc/systemd/system/restic_cleanup@.service.j2',
+        'content_type': 'jinja2',
+        'context': {
+            'user': RESTIC_USER,
+        },
+        'owner': 'root',
+        'group': 'root',
+        'triggers': [
+            'action:restic_systemd_daemon_reload'
+        ],
+    },
+    '/etc/systemd/system/restic_cleanup@.timer': {
+        'source': 'etc/systemd/system/restic_cleanup@.timer.j2',
+        'content_type': 'jinja2',
+        'owner': 'root',
+        'group': 'root',
+        'triggers': [
+            'action:restic_systemd_daemon_reload'
+        ],
+    },
+    '/etc/restic/restic_run.sh': {
+        'content_type': "mako",
+        'context': {
+            'pre_commands': node.metadata.get('restic', {}).get('pre_commands', []),
+            'post_commands': node.metadata.get('restic', {}).get('post_commands', []),
+            'stdin_commands': node.metadata.get('restic', {}).get('stdin_commands', {}),
+        },
+        'source': "etc/restic/restic_run.sh",
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
+        'mode': '0755',
+        'needs': [
+            f'tag:init_restic',
+        ]
+    },
+    '/etc/restic/restic_cleanup.sh': {
+        'source': "etc/restic/restic_cleanup.sh",
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
+        'mode': '0755',
+        'needs': [
+            f'tag:init_restic',
+        ],
+    },
 }
 
 
@@ -182,38 +257,38 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             f'file:/etc/restic/password_{backup_host}',
             f'file:/etc/restic/env_{backup_host}',
         ],
+        'tags': {
+            'init_restic'
+        },
     }
 
-    # cron does not like . in filenames
+    svc_systemd[f'restic@{backup_host}.timer'] = {
+        'enabled': True,
+        'running': True,
+        'triggers': [
+            f'svc_systemd:restic@{backup_host}.timer:restart',
+        ],
+        'needs': [
+            'file:/etc/systemd/system/restic@.service',
+            'file:/etc/systemd/system/restic@.timer',
+            'action:restic_systemd_daemon_reload',
+        ],
+    }
+    svc_systemd[f'restic_cleanup@{backup_host}.timer'] = {
+        'enabled': True,
+        'running': True,
+        'triggers': [
+            f'svc_systemd:restic_cleanup@{backup_host}.timer:restart',
+        ],
+        'needs': [
+            'file:/etc/systemd/system/restic_cleanup@.service',
+            'file:/etc/systemd/system/restic_cleanup@.timer',
+            'action:restic_systemd_daemon_reload',
+        ],
+    }
     files['/etc/cron.hourly/restic_{host_name}'.format(host_name=backup_host.replace('.', '_'))] = {
-        'content_type': "mako",
-        'context': {
-            'restic_repository': repository_url,
-            'backup_host': backup_host,
-            'pre_commands': node.metadata.get('restic', {}).get('pre_commands', []),
-            'post_commands': node.metadata.get('restic', {}).get('post_commands', []),
-            'stdin_commands': node.metadata.get('restic', {}).get('stdin_commands', {}),
-        },
-        'source': "cron_hourly.sh",
-        'owner': RESTIC_USER,
-        'group': RESTIC_GROUP,
-        'mode': '0755',
-        'needs': [
-            f'action:init_restic_{backup_host}',
-        ]
+        'delete': True,
     }
-
     files['/etc/cron.daily/restic_{host_name}'.format(host_name=backup_host.replace('.', '_'))] = {
-        'content_type': "mako",
-        'context': {
-            'restic_repository': repository_url,
-            'backup_host': backup_host,
-        },
-        'source': "cron_daily.sh",
-        'owner': RESTIC_USER,
-        'group': RESTIC_GROUP,
-        'mode': '0755',
-        'needs': [
-            f'action:init_restic_{backup_host}',
-        ]
+        'delete': True,
     }
