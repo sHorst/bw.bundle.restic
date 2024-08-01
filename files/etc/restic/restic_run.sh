@@ -25,6 +25,6 @@ ${post_cmd}
 % endfor
 
 # remove old files
-/opt/restic/restic forget -l "$KEEP_LAST" -H "$KEEP_HOURLY" -d "$KEEP_DAILY" -w "$KEEP_WEEKLY" -m "$KEEP_MONTHLY" -y "$KEEP_YEARLY" -q
+/opt/restic/restic forget -l $KEEP_LAST -H $KEEP_HOURLY -d $KEEP_DAILY -w $KEEP_WEEKLY -m $KEEP_MONTHLY -y $KEEP_YEARLY -q
 
 rm "$LOCK_FILE"

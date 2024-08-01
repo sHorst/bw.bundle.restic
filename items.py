@@ -174,7 +174,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
                    f'--password-file /etc/restic/password_{backup_host} '
                    f'-r {repository_url} '
                    'init',
-        'unless': f'. /etc/restic/env_{backup_host} && /opt/restic/restic -r {repository_url} cat config',
+        'unless': f'set -a; . /etc/restic/env_{backup_host}; set +a && /opt/restic/restic -r {repository_url} cat config',
         'needs': [
             f'download:/opt/restic/restic_{RESTIC_VERSION}.bz2',
             f'tag:prepare_restic_backup_{backup_host}',
