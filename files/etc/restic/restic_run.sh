@@ -1,16 +1,10 @@
 #!/usr/bin/env bash
 
-. /etc/restic/env_${backup_host}
-
-if [ -f ${LOCK_FILE} ]; then
+if [ -f "$LOCK_FILE" ]; then
     exit 0
 fi
 
-if [ $(date +%H) -ne ${RUN_HOUR} ]; then
-    exit 0
-fi
-
-touch ${LOCK_FILE}
+touch "$LOCK_FILE"
 
 # pre backup
 % for pre_cmd in pre_commands:
@@ -31,6 +25,6 @@ ${post_cmd}
 % endfor
 
 # remove old files
-/opt/restic/restic forget -l ${keep.get('last', 1)} -H ${keep.get('hourly', 3)} -d ${keep.get('daily', 5)} -w ${keep.get('weekly', 2)} -m ${keep.get('monthly', 5)} -y ${keep.get('yearly', 1)} -q
+/opt/restic/restic forget -l $KEEP_LAST -H $KEEP_HOURLY -d $KEEP_DAILY -w $KEEP_WEEKLY -m $KEEP_MONTHLY -y $KEEP_YEARLY -q
 
-rm ${LOCK_FILE}
+rm "$LOCK_FILE"

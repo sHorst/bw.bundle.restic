@@ -6,25 +6,34 @@ global node, repo
 
 RESTIC_VERSION = node.metadata.get('restic').get('version')
 RESTIC_SHA256 = node.metadata.get('restic').get('checksum_sha256')
+RESTIC_ARCH = node.metadata.get('restic').get('arch')
+RESTIC_USER = node.metadata.get('restic').get('user')
+RESTIC_GROUP = node.metadata.get('restic').get('group')
 
+users = {
+    RESTIC_USER: {
+        'home': '/etc/restic',
+        'shell': '/sbin/nologin',
+        'password_hash': '*',
+    }
+}
 
 directories = {
     '/opt/restic': {
-        'owner': 'root',
-        'group': 'root',
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': "0751",
     },
     '/etc/restic': {
-        'owner': 'root',
-        'group': 'root',
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': "0700",
     }
 }
 
 downloads = {
     f'/opt/restic/restic_{RESTIC_VERSION}.bz2': {
-        'url': f'https://github.com/restic/restic/releases/download/v{RESTIC_VERSION}/restic_{RESTIC_VERSION}'
-                '_linux_amd64.bz2',
+        'url': f'https://github.com/restic/restic/releases/download/v{RESTIC_VERSION}/restic_{RESTIC_VERSION}_{RESTIC_ARCH}.bz2',
         'sha256': RESTIC_SHA256,
         'needs': ['directory:/opt/restic', 'pkg_apt:ca-certificates'],
         'triggers': ['action:unpack_restic'],
@@ -41,17 +50,100 @@ actions = {
         'needs': ['pkg_apt:bzip2'],
         'triggered': True,
     },
+    'restic_systemd_daemon_reload': {
+        'command': 'systemctl daemon-reload',
+        'triggered': True,
+    },
+    'restic_chown_home': {
+        'command': f'chown -R {RESTIC_USER}:{RESTIC_GROUP} /etc/restic',
+        'unless': f'test -z "$(find /etc/restic ! -user {RESTIC_USER})"',
+    }
 }
+
+svc_systemd = {}
 
 files = {
     '/etc/restic/include': {
         'content': "\n".join(sorted(node.metadata.get('restic', {}).get('backup_folders', []))) + "\n",
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': "0600",
     },
     '/etc/restic/exclude': {
         'content': "\n".join(sorted(node.metadata.get('restic', {}).get('exclude_folders', []))) + "\n",
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': "0600",
-    }
+    },
+    '/etc/systemd/system/restic@.service': {
+        'source': 'etc/systemd/system/restic@.service.j2',
+        'content_type': 'jinja2',
+        'context': {
+            'user': RESTIC_USER,
+        },
+        'owner': 'root',
+        'group': 'root',
+        'triggers': [
+            'action:restic_systemd_daemon_reload'
+        ],
+    },
+    '/etc/systemd/system/restic@.timer': {
+        'source': 'etc/systemd/system/restic@.timer.j2',
+        'content_type': 'jinja2',
+        'context': {
+            'backup_time': node.metadata.get('restic', {}).get('backup_time'),
+        },
+        'owner': 'root',
+        'group': 'root',
+        'triggers': [
+            'action:restic_systemd_daemon_reload'
+        ],
+    },
+    '/etc/systemd/system/restic_cleanup@.service': {
+        'source': 'etc/systemd/system/restic_cleanup@.service.j2',
+        'content_type': 'jinja2',
+        'context': {
+            'user': RESTIC_USER,
+        },
+        'owner': 'root',
+        'group': 'root',
+        'triggers': [
+            'action:restic_systemd_daemon_reload'
+        ],
+    },
+    '/etc/systemd/system/restic_cleanup@.timer': {
+        'source': 'etc/systemd/system/restic_cleanup@.timer.j2',
+        'content_type': 'jinja2',
+        'owner': 'root',
+        'group': 'root',
+        'triggers': [
+            'action:restic_systemd_daemon_reload'
+        ],
+    },
+    '/etc/restic/restic_run.sh': {
+        'content_type': "mako",
+        'context': {
+            'pre_commands': node.metadata.get('restic', {}).get('pre_commands', []),
+            'post_commands': node.metadata.get('restic', {}).get('post_commands', []),
+            'stdin_commands': node.metadata.get('restic', {}).get('stdin_commands', {}),
+        },
+        'source': "etc/restic/restic_run.sh",
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
+        'mode': '0755',
+        'needs': [
+            f'tag:init_restic',
+        ]
+    },
+    '/etc/restic/restic_cleanup.sh': {
+        'source': "etc/restic/restic_cleanup.sh",
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
+        'mode': '0755',
+        'needs': [
+            f'tag:init_restic',
+        ],
+    },
 }
 
 
@@ -149,8 +241,8 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
 
     files[f'/etc/restic/password_{backup_host}'] = {
         'content': repo.vault.password_for(f"restic_password_{backup_host}_{node.name}").value,
-        'owner': 'root',
-        'group': 'root',
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': '0600',
     }
 
@@ -159,11 +251,11 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         'context': {
             'repository_url': repository_url,
             'backup_host': backup_host,
-            'environment_vars': backup_host_config.get('environment_vars', {}),
+            'backup_host_config': backup_host_config,
         },
-        'source': 'env_backup_host',
-        'owner': 'root',
-        'group': 'root',
+        'source': 'etc/restic/env_backup_host',
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
         'mode': '0600',
     }
 
@@ -172,7 +264,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
                    f'--password-file /etc/restic/password_{backup_host} '
                    f'-r {repository_url} '
                    'init',
-        'unless': f'. /etc/restic/env_{backup_host} && /opt/restic/restic -r {repository_url} cat config',
+        'unless': f'set -a; . /etc/restic/env_{backup_host}; set +a && /opt/restic/restic -r {repository_url} cat config',
         'needs': [
             f'download:/opt/restic/restic_{RESTIC_VERSION}.bz2',
             f'tag:prepare_restic_backup_{backup_host}',
@@ -180,43 +272,38 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             f'file:/etc/restic/password_{backup_host}',
             f'file:/etc/restic/env_{backup_host}',
         ],
+        'tags': {
+            'init_restic'
+        },
     }
 
-    # cron does not like . in filenames
+    svc_systemd[f'restic@{backup_host}.timer'] = {
+        'enabled': True,
+        'running': True,
+        'triggers': [
+            f'svc_systemd:restic@{backup_host}.timer:restart',
+        ],
+        'needs': [
+            'file:/etc/systemd/system/restic@.service',
+            'file:/etc/systemd/system/restic@.timer',
+            'action:restic_systemd_daemon_reload',
+        ],
+    }
+    svc_systemd[f'restic_cleanup@{backup_host}.timer'] = {
+        'enabled': True,
+        'running': True,
+        'triggers': [
+            f'svc_systemd:restic_cleanup@{backup_host}.timer:restart',
+        ],
+        'needs': [
+            'file:/etc/systemd/system/restic_cleanup@.service',
+            'file:/etc/systemd/system/restic_cleanup@.timer',
+            'action:restic_systemd_daemon_reload',
+        ],
+    }
     files['/etc/cron.hourly/restic_{host_name}'.format(host_name=backup_host.replace('.', '_'))] = {
-        'content_type': "mako",
-        'context': {
-            'restic_repository': repository_url,
-            'backup_host': backup_host,
-            'keep': backup_host_config.get('keep', {}),
-            'pre_commands': node.metadata.get('restic', {}).get('pre_commands', []),
-            'post_commands': node.metadata.get('restic', {}).get('post_commands', []),
-            'stdin_commands': node.metadata.get('restic', {}).get('stdin_commands', {}),
-            'LOCK_FILE': f'/tmp/restic_{backup_host}.lock',
-            'RUN_HOUR': node.metadata.get('restic', {}).get('run_hour', 3),
-        },
-        'source': "cron_hourly.sh",
-        'owner': 'root',
-        'group': 'root',
-        'mode': '0755',
-        'needs': [
-            f'action:init_restic_{backup_host}',
-        ]
+        'delete': True,
     }
-
     files['/etc/cron.daily/restic_{host_name}'.format(host_name=backup_host.replace('.', '_'))] = {
-        'content_type': "mako",
-        'context': {
-            'restic_repository': repository_url,
-            'backup_host': backup_host,
-            'keep': backup_host_config.get('keep', {}),
-            'LOCK_FILE': f'/tmp/restic_{backup_host}.lock',
-        },
-        'source': "cron_daily.sh",
-        'owner': 'root',
-        'group': 'root',
-        'mode': '0755',
-        'needs': [
-            f'action:init_restic_{backup_host}',
-        ]
+        'delete': True,
     }
