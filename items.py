@@ -9,10 +9,11 @@ RESTIC_SHA256 = node.metadata.get('restic').get('checksum_sha256')
 RESTIC_ARCH = node.metadata.get('restic').get('arch')
 RESTIC_USER = node.metadata.get('restic').get('user')
 RESTIC_GROUP = node.metadata.get('restic').get('group')
+RESTIC_HOME = '/etc/restic'
 
 users = {
     RESTIC_USER: {
-        'home': '/etc/restic',
+        'home': RESTIC_HOME,
         'shell': '/sbin/nologin',
         'password_hash': '*',
     }
@@ -24,7 +25,12 @@ directories = {
         'group': RESTIC_GROUP,
         'mode': "0751",
     },
-    '/etc/restic': {
+    RESTIC_HOME: {
+        'owner': RESTIC_USER,
+        'group': RESTIC_GROUP,
+        'mode': "0700",
+    },
+    f'{RESTIC_HOME}/.ssh': {
         'owner': RESTIC_USER,
         'group': RESTIC_GROUP,
         'mode': "0700",
@@ -55,21 +61,21 @@ actions = {
         'triggered': True,
     },
     'restic_chown_home': {
-        'command': f'chown -R {RESTIC_USER}:{RESTIC_GROUP} /etc/restic',
-        'unless': f'test -z "$(find /etc/restic ! -user {RESTIC_USER})"',
+        'command': f'chown -R {RESTIC_USER}:{RESTIC_GROUP} {RESTIC_HOME}',
+        'unless': f'test -z "$(find {RESTIC_HOME} ! -user {RESTIC_USER})"',
     }
 }
 
 svc_systemd = {}
 
 files = {
-    '/etc/restic/include': {
+    f'{RESTIC_HOME}/include': {
         'content': "\n".join(sorted(node.metadata.get('restic', {}).get('backup_folders', []))) + "\n",
         'owner': RESTIC_USER,
         'group': RESTIC_GROUP,
         'mode': "0600",
     },
-    '/etc/restic/exclude': {
+    f'{RESTIC_HOME}/exclude': {
         'content': "\n".join(sorted(node.metadata.get('restic', {}).get('exclude_folders', []))) + "\n",
         'owner': RESTIC_USER,
         'group': RESTIC_GROUP,
@@ -120,7 +126,7 @@ files = {
             'action:restic_systemd_daemon_reload'
         ],
     },
-    '/etc/restic/restic_run.sh': {
+    f'{RESTIC_HOME}/restic_run.sh': {
         'content_type': "mako",
         'context': {
             'pre_commands': node.metadata.get('restic', {}).get('pre_commands', []),
@@ -135,7 +141,7 @@ files = {
             f'tag:init_restic',
         ]
     },
-    '/etc/restic/restic_cleanup.sh': {
+    f'{RESTIC_HOME}/restic_cleanup.sh': {
         'source': "etc/restic/restic_cleanup.sh",
         'owner': RESTIC_USER,
         'group': RESTIC_GROUP,
@@ -165,29 +171,30 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             host_key = backup_host_config.get('hostkey')  # This should break, if it is not set!
 
         repository_url = f'sftp://{backup_host}/{node.name}'
-        identity_file = f"~/.ssh/{backup_host}"
+        identity_file = f"{RESTIC_HOME}/.ssh/{backup_host}"
         port = backup_host_config.get('port', 22)
+        backup_user = backup_host_config.get('username', 'scoutnetbackup'),
 
         actions[f'create_ssh_key_{backup_host}'] = {
-            'command': 'ssh-keygen -t ed25519 -f ~/.ssh/{host_name} -C {comment} -N ""'.format(
+                'command': 'if test -f /root/.ssh/{host_name}; then mv /root/.ssh/{host_name} {RESTIC_HOME}/.ssh/; mv /root/.ssh/{host_name}.pub {RESTIC_HOME}/.ssh/; chown -R {RESTIC_USER}:{RESTIC_GROUP} {RESTIC_HOME}/.ssh; else ssh-keygen -t ed25519 -f {RESTIC_HOME}/.ssh/{host_name} -C {comment} -N ""; fi'.format(
                 host_name=backup_host,
-                comment=quote(node.name)
+                comment=quote(node.name),
+                RESTIC_HOME=RESTIC_HOME,
+                RESTIC_USER=RESTIC_USER,
+                RESTIC_GROUP=RESTIC_GROUP
             ),
-            'unless': f'test -f ~/.ssh/{backup_host}',
+            'needs': [f'directory:{RESTIC_HOME}/.ssh'],
+            'unless': f'test -f {RESTIC_HOME}/.ssh/{backup_host}',
         }
         # node.download(f'/root/.ssh/{backup_host}.pub', 'test123')
         actions[f'add_ssh_config_{backup_host}'] = {
-            'command': 'echo "Host {host_name}\\n'
-                       'user {backup_user}\\n'
-                       'identityfile {identity_file}\\n'
-                       'port {port}"'
-                       ' >> ~/.ssh/config'.format(
-                            host_name=backup_host,
-                            backup_user=backup_host_config.get('username', 'scoutnetbackup'),
-                            identity_file=identity_file,
-                            port=port,
-                       ),
-            'unless': f'grep -q \'{backup_host}\' ~/.ssh/config',
+            'command': f'echo "Host {backup_host}\\n'
+                       f'user {backup_user}\\n'
+                       f'identityfile {identity_file}\\n'
+                       f'port {port}"'
+                       f' >> {RESTIC_HOME}/.ssh/config',
+            'needs': [f'directory:{RESTIC_HOME}/.ssh'],
+            'unless': f'grep -q \'{backup_host}\' {RESTIC_HOME}/.ssh/config',
         }
 
         # add hostkey for hostname in known hosts file
@@ -195,14 +202,12 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         if port != 22:
             ssh_known_hosts_host_name = f"[{backup_host}]:{port}"
 
+        host_name=quote(ssh_known_hosts_host_name).replace('[', '\\[').replace(']', '\\]')
+
         actions[f'add_known_host_{backup_host}'] = {
-            'command': 'echo {host_name} {host_key} >> ~/.ssh/known_hosts'.format(
-                host_name=quote(ssh_known_hosts_host_name),
-                host_key=quote(host_key)
-            ),
-            'unless': 'grep -q {host_name} ~/.ssh/known_hosts'.format(
-                host_name=quote(ssh_known_hosts_host_name).replace('[', '\\[').replace(']', '\\]')
-            ),
+            'command': f'echo {ssh_known_hosts_host_name} {host_key} >> {RESTIC_HOME}/.ssh/known_hosts',
+            'needs': [f'directory:{RESTIC_HOME}/.ssh'],
+            'unless': f'grep -q {host_name} {RESTIC_HOME}/.ssh/known_hosts',
         }
 
         # add hostkey for ip in known hosts file
@@ -211,23 +216,19 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             if port != 22:
                 ssh_known_hosts_host_ip = f"[{backup_host_ip}]:{port}"
 
+            host_ip=quote(ssh_known_hosts_host_ip).replace('[', '\\[').replace(']', '\\]')
+
             actions[f'add_known_host_{backup_host_ip}'] = {
-                'command': 'echo {host_ip} {host_key} >> ~/.ssh/known_hosts'.format(
-                    host_ip=quote(ssh_known_hosts_host_ip),
-                    host_key=quote(host_key)
-                ),
-                'unless': 'grep -q {host_ip} ~/.ssh/known_hosts'.format(
-                    host_ip=quote(ssh_known_hosts_host_ip).replace('[', '\\[').replace(']', '\\]')
-                ),
+                'command': f'echo {ssh_known_hosts_host_ip} {host_key} >> {RESTIC_HOME}/.ssh/known_hosts',
+                'needs': [f'directory:{RESTIC_HOME}/.ssh'],
+                'unless': f'grep -q {host_ip} {RESTIC_HOME}/.ssh/known_hosts',
+                
             }
 
         actions[f'print_ssh_key_{backup_host}'] = {
-            'command': 'echo "please register this ssh key on {host_name}:" && cat {identity_file}.pub && exit 255'.format(
-                host_name=backup_host,
-                identity_file=identity_file
-            ),
+            'command': f'echo "please register this ssh key on {backup_host}:" && cat {identity_file}.pub && exit 255',
             # we only allow rsync, sftp and scp
-            'unless': 'ssh {host_name} rsync --server --version || false'.format(host_name=backup_host),
+            'unless': f'sudo -u {RESTIC_USER} ssh {backup_host} rsync --server --version || false',
             'needs': [
                 'action:create_ssh_key_{host_name}'.format(host_name=backup_host),
                 'action:add_ssh_config_{host_name}'.format(host_name=backup_host),
@@ -239,14 +240,14 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             ]
         }
 
-    files[f'/etc/restic/password_{backup_host}'] = {
+    files[f'{RESTIC_HOME}/password_{backup_host}'] = {
         'content': repo.vault.password_for(f"restic_password_{backup_host}_{node.name}").value,
         'owner': RESTIC_USER,
         'group': RESTIC_GROUP,
         'mode': '0600',
     }
 
-    files[f'/etc/restic/env_{backup_host}'] = {
+    files[f'{RESTIC_HOME}/env_{backup_host}'] = {
         'content_type': "mako",
         'context': {
             'repository_url': repository_url,
@@ -260,17 +261,14 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
     }
 
     actions[f'init_restic_{backup_host}'] = {
-        'command': f'. /etc/restic/env_{backup_host} && /opt/restic/restic '
-                   f'--password-file /etc/restic/password_{backup_host} '
-                   f'-r {repository_url} '
-                   'init',
-        'unless': f'set -a; . /etc/restic/env_{backup_host}; set +a && /opt/restic/restic -r {repository_url} cat config',
+        'command': f'. {RESTIC_HOME}/env_{backup_host} && /opt/restic/restic init',
+        'unless': f'set -a; . {RESTIC_HOME}/env_{backup_host}; set +a && sudo -u {RESTIC_USER} -E /opt/restic/restic cat config',
         'needs': [
             f'download:/opt/restic/restic_{RESTIC_VERSION}.bz2',
             f'tag:prepare_restic_backup_{backup_host}',
             'action:unpack_restic',
-            f'file:/etc/restic/password_{backup_host}',
-            f'file:/etc/restic/env_{backup_host}',
+            f'file:{RESTIC_HOME}/password_{backup_host}',
+            f'file:{RESTIC_HOME}/env_{backup_host}',
         ],
         'tags': {
             'init_restic'
