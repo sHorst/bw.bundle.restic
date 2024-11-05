@@ -39,7 +39,8 @@ directories = {
 
 downloads = {
     f'/opt/restic/restic_{RESTIC_VERSION}.bz2': {
-        'url': f'https://github.com/restic/restic/releases/download/v{RESTIC_VERSION}/restic_{RESTIC_VERSION}_{RESTIC_ARCH}.bz2',
+        'url': f'https://github.com/restic/restic/releases/download/v{RESTIC_VERSION}/'
+               f'restic_{RESTIC_VERSION}_{RESTIC_ARCH}.bz2',
         'sha256': RESTIC_SHA256,
         'needs': ['directory:/opt/restic', 'pkg_apt:ca-certificates'],
         'triggers': ['action:unpack_restic'],
@@ -50,9 +51,9 @@ downloads = {
 actions = {
     'unpack_restic': {
         'command': f'bunzip2 -f /opt/restic/restic_{RESTIC_VERSION}.bz2 '
-                    f'&& chmod +x /opt/restic/restic_{RESTIC_VERSION} '
-                     '&& rm -f /opt/restic/restic '  # remove old file
-                     f'&& ln -s restic_{RESTIC_VERSION} /opt/restic/restic',
+                   f'&& chmod +x /opt/restic/restic_{RESTIC_VERSION} '
+                   '&& rm -f /opt/restic/restic '  # remove old file
+                   f'&& ln -s restic_{RESTIC_VERSION} /opt/restic/restic',
         'needs': ['pkg_apt:bzip2'],
         'triggered': True,
     },
@@ -156,7 +157,7 @@ files = {
 for backup_host, backup_host_config in node.metadata.get('restic', {}).get('backup_hosts', {}).items():
     if backup_host_config.get('repository_type', 'sftp') in ['s3', 'minio']:
         repository_url = f"s3:{backup_host_config.get('address')}/{backup_host_config.get('bucket_name', node.name)}"
-    else: # Use sftp Repository
+    else:  # Use sftp Repository
         try:
             backup_node = repo.get_node(backup_host)
             backup_host = backup_node.hostname
@@ -173,18 +174,20 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         repository_url = f'sftp://{backup_host}/{node.name}'
         identity_file = f"{RESTIC_HOME}/.ssh/{backup_host}"
         port = backup_host_config.get('port', 22)
-        backup_user = backup_host_config.get('username', 'scoutnetbackup'),
+        backup_user = backup_host_config.get('username', 'scoutnetbackup')
+        comment = quote(node.name)
 
         actions[f'create_ssh_key_{backup_host}'] = {
-                'command': 'if test -f /root/.ssh/{host_name}; then mv /root/.ssh/{host_name} {RESTIC_HOME}/.ssh/; mv /root/.ssh/{host_name}.pub {RESTIC_HOME}/.ssh/; chown -R {RESTIC_USER}:{RESTIC_GROUP} {RESTIC_HOME}/.ssh; else ssh-keygen -t ed25519 -f {RESTIC_HOME}/.ssh/{host_name} -C {comment} -N ""; fi'.format(
-                host_name=backup_host,
-                comment=quote(node.name),
-                RESTIC_HOME=RESTIC_HOME,
-                RESTIC_USER=RESTIC_USER,
-                RESTIC_GROUP=RESTIC_GROUP
-            ),
-            'needs': [f'directory:{RESTIC_HOME}/.ssh'],
-            'unless': f'test -f {RESTIC_HOME}/.ssh/{backup_host}',
+                'command': f'if test -f /root/.ssh/{backup_host}; '
+                           'then '
+                           f'mv /root/.ssh/{backup_host} {RESTIC_HOME}/.ssh/; '
+                           f'mv /root/.ssh/{backup_host}.pub {RESTIC_HOME}/.ssh/; '
+                           f'chown -R {RESTIC_USER}:{RESTIC_GROUP} {RESTIC_HOME}/.ssh; '
+                           'else '
+                           f'ssh-keygen -t ed25519 -f {RESTIC_HOME}/.ssh/{backup_host} -C {comment} -N ""; '
+                           'fi',
+                'needs': [f'directory:{RESTIC_HOME}/.ssh'],
+                'unless': f'test -f {RESTIC_HOME}/.ssh/{backup_host}',
         }
         # node.download(f'/root/.ssh/{backup_host}.pub', 'test123')
         actions[f'add_ssh_config_{backup_host}'] = {
@@ -202,7 +205,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         if port != 22:
             ssh_known_hosts_host_name = f"[{backup_host}]:{port}"
 
-        host_name=quote(ssh_known_hosts_host_name).replace('[', '\\[').replace(']', '\\]')
+        host_name = quote(ssh_known_hosts_host_name).replace('[', '\\[').replace(']', '\\]')
 
         actions[f'add_known_host_{backup_host}'] = {
             'command': f'echo {ssh_known_hosts_host_name} {host_key} >> {RESTIC_HOME}/.ssh/known_hosts',
@@ -262,7 +265,8 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
 
     actions[f'init_restic_{backup_host}'] = {
         'command': f'. {RESTIC_HOME}/env_{backup_host} && /opt/restic/restic init',
-        'unless': f'set -a; . {RESTIC_HOME}/env_{backup_host}; set +a && sudo -u {RESTIC_USER} -E /opt/restic/restic cat config',
+        'unless': f'set -a; . {RESTIC_HOME}/env_{backup_host}; '
+                  f'set +a && sudo -u {RESTIC_USER} -E /opt/restic/restic cat config',
         'needs': [
             f'download:/opt/restic/restic_{RESTIC_VERSION}.bz2',
             f'tag:prepare_restic_backup_{backup_host}',
