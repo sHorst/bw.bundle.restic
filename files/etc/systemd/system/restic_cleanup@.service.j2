@@ -4,16 +4,15 @@ AssertPathExists=/etc/restic/env_%i
 AssertPathExists=/etc/restic/password_%i
 After=network.target
 
-[Exec]
+[Service]
+Type=oneshot
 User={{ user }}
 AmbientCapabilities=CAP_DAC_READ_SEARCH
 ProtectSystem=strict
 PrivateTmp=true
 ReadWritePaths=/etc/restic
-
-[Service]
-Type=oneshot
-Environment=RESTIC_CACHE_DIR=/etc/restic/.cache
+WorkingDirectory=/etc/restic
+Environment="RESTIC_CACHE_DIR=/etc/restic/.cache"
 EnvironmentFile=/etc/restic/env_%i
 ExecStart=/etc/restic/restic_cleanup.sh
 
