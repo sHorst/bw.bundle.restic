@@ -2,6 +2,7 @@ from os.path import join, isfile
 from os import system
 from bundlewrap.utils import get_file_contents
 from bundlewrap.exceptions import NoSuchNode, RemoteException
+from subprocess import DEVNULL, STDOUT, check_call, CalledProcessError
 
 global metadata_reactor, node, repo
 
@@ -45,13 +46,17 @@ def load_public_keys(metadata):
 
         if not isfile(filename):
             # check if host is up
-            if system("ping -c 1 -t 1 " + node.hostname) == 0:
+            try:
+                # throw error
+                check_call(['ping', '-c', '1', '-t', '1', node.hostname], stdout=DEVNULL, stderr=STDOUT)
                 # download Node File
                 print('\n -- needed to download new file from host, consider adding it to GIT\n')
                 try:
                     node.download(f'/etc/restic/.ssh/{backup_host}.pub', filename)
                 except RemoteException:
                     pass
+            except CalledProcessError:
+                pass
 
         if isfile(filename):
             backup_hosts[node_name] = {
