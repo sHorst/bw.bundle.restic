@@ -225,7 +225,6 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
                 'command': f'echo {ssh_known_hosts_host_ip} {host_key} >> {RESTIC_HOME}/.ssh/known_hosts',
                 'needs': [f'directory:{RESTIC_HOME}/.ssh'],
                 'unless': f'grep -q {host_ip} {RESTIC_HOME}/.ssh/known_hosts',
-                
             }
 
         actions[f'print_ssh_key_{backup_host}'] = {
@@ -264,7 +263,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
     }
 
     actions[f'init_restic_{backup_host}'] = {
-        'command': f'. {RESTIC_HOME}/env_{backup_host} && /opt/restic/restic init',
+        'command': f'set -a; . {RESTIC_HOME}/env_{backup_host}; set +a && sudo -u {RESTIC_USER} -E /opt/restic/restic init',
         'unless': f'set -a; . {RESTIC_HOME}/env_{backup_host}; '
                   f'set +a && sudo -u {RESTIC_USER} -E /opt/restic/restic cat config',
         'needs': [
