@@ -4,3 +4,6 @@ Description=Run restic@%i.service at specific time
 [Timer]
 OnCalendar={{ backup_time }}
 Unit=restic@%i.service
+
+[Install]
+WantedBy=timers.target

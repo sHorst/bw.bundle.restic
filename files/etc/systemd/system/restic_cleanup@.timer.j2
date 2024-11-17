@@ -5,3 +5,6 @@ Description=Run restic_cleanup@%i.service once a day
 OnCalendar=daily
 AccuracySec=12h
 Unit=restic_cleanup@%i.service
+
+[Install]
+WantedBy=timers.target
