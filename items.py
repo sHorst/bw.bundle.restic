@@ -184,7 +184,8 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
                            f'mv /root/.ssh/{backup_host}.pub {RESTIC_HOME}/.ssh/; '
                            f'chown -R {RESTIC_USER}:{RESTIC_GROUP} {RESTIC_HOME}/.ssh; '
                            'else '
-                           f'ssh-keygen -t ed25519 -f {RESTIC_HOME}/.ssh/{backup_host} -C {comment} -N ""; '
+                           f'sudo -u {RESTIC_USER} -H ssh-keygen -t ed25519 -f {RESTIC_HOME}/.ssh/{backup_host} '
+                           f'-C {comment} -N ""; '
                            'fi',
                 'needs': [f'directory:{RESTIC_HOME}/.ssh'],
                 'unless': f'test -f {RESTIC_HOME}/.ssh/{backup_host}',
