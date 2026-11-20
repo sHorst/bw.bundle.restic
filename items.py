@@ -171,7 +171,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
             backup_host_ips = [socket.gethostbyname(backup_host), ]
             host_key = backup_host_config.get('hostkey')  # This should break, if it is not set!
 
-        repository_url = f'sftp://{backup_host}/{node.name}'
+        repository_url = f'sftp://{backup_host}/{backup_host_config.get('repository_name', node.name)}'
         identity_file = f"{RESTIC_HOME}/.ssh/{backup_host}"
         port = backup_host_config.get('port', 22)
         backup_user = backup_host_config.get('username', 'scoutnetbackup')
@@ -244,7 +244,7 @@ for backup_host, backup_host_config in node.metadata.get('restic', {}).get('back
         }
 
     files[f'{RESTIC_HOME}/password_{backup_host}'] = {
-        'content': repo.vault.password_for(f"restic_password_{backup_host}_{node.name}").value,
+        'content': backup_host_config.get('repository_password', repo.vault.password_for(f"restic_password_{backup_host}_{node.name}").value),
         'owner': RESTIC_USER,
         'group': RESTIC_GROUP,
         'mode': '0600',

@@ -23,6 +23,8 @@ Demo Metadata
     'backup_hosts': {
         'backup.mydomain.net': {
             #'repository_type': 'sftp',
+            #'repository_name': node.name,
+            #'repository_password': vault.password_for(f"restic_password_{backup_host}_{node.name}"),
             'username': 'myBackupUser',
             'port': 12345,
             'hostkey': 'ecdsa-sha2-nistp256 ...',
