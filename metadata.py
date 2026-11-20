@@ -8,8 +8,8 @@ global metadata_reactor, node, repo
 
 defaults = {
     'restic': {
-        'version': '0.17.0',
-        'checksum_sha256': 'fec7ade9f12c30bd6323568dbb0f81a3f98a3c86acc8161590235c0f18194022',
+        'version': '0.20.0',
+        'checksum_sha256': '0ccd9fa7885074a24603b051e01bf9bd8b5e45d6a1791e9d9887e9e9372107f7',
         'arch': 'linux_amd64',
         'user': 'restic',
         'group': 'restic',
@@ -32,7 +32,7 @@ def load_public_keys(metadata):
     backup_hosts = {}
     for backup_host, config in metadata.get('restic/backup_hosts', {}).items():
         # Skip all none-sftp repositories
-        if config.get('repository_type', 'sftp') != 'sftp':
+        if config.get('repository_type', 'sftp') != 'sftp' or config.get('skip_load_public_keys', False):
             continue
 
         try:
